@@ -97,3 +97,43 @@ BEGIN
 END
 GO
 
+
+
+
+/*
+
+    Get all media and sort them by their category name
+
+*/
+
+CREATE OR ALTER PROCEDURE GetAllMediaSortedByCategory
+AS
+BEGIN
+    SELECT MediaItems.*, MediaCategories.Name AS CategoryName FROM MediaItems
+    LEFT JOIN MediaCategories ON MediaItems.CategoryID = MediaCategories.Id
+    WHERE MediaItems.Deleted = 0
+    ORDER BY MediaCategories.Name;
+END
+GO
+
+SELECT MediaItems.*, MediaCategories.Name AS CategoryName FROM MediaItems
+LEFT JOIN MediaCategories ON MediaItems.CategoryID = MediaCategories.Id
+WHERE MediaItems.Deleted = 0
+ORDER BY MediaCategories.Name;
+
+/*
+    Search Media Item by title 
+*/
+
+CREATE OR ALTER PROCEDURE SearchMediaByTitle
+    @SearchTerm NVARCHAR(255)
+AS
+BEGIN
+    SELECT MediaItems.*, MediaCategories.Name AS CategoryName FROM MediaItems
+    LEFT JOIN MediaCategories ON MediaItems.CategoryID = MediaCategories.Id
+    WHERE MediaItems.MediaTitle LIKE '%' + @SearchTerm + '%'
+    AND MediaItems.Deleted = 0;
+END
+
+
+

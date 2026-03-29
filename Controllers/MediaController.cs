@@ -53,8 +53,8 @@ namespace Vaulted.Controllers
             {
                 await _context.Database.BeginTransactionAsync();
 
-                string SQLQueryRaw = "EXEC GetAllMediaOrderByCategory";
-                var res = await _context.Database.SqlQueryRaw<MediaDTO>(SQLQueryRaw).ToListAsync();
+                string SQLQueryRaw = "EXEC GetAllMediaSortedByCategory";
+                var res = await _context.Database.SqlQueryRaw<MediaSortedByCateDTO>(SQLQueryRaw).ToListAsync();
                 await _context.Database.CommitTransactionAsync();
                 return Ok(res);
             }
@@ -69,7 +69,27 @@ namespace Vaulted.Controllers
 
 
         // GET: get all media -> search by name
+        [HttpGet("search-media-by-name/{searchTerm}")]
+        public async Task<IActionResult> SearchMediaByTitle(string searchTerm)
+        {
+            try
+            {
+                await _context.Database.BeginTransactionAsync();
 
+                SqlParameter paramName = new SqlParameter("@SearchTerm", System.Data.SqlDbType.NVarChar, 100) { Value = searchTerm };
+
+                string SQLQueryRaw = $"EXEC SearchMediaByName @SearchTerm = '{searchTerm}'";
+                var res = await _context.Database.SqlQueryRaw<MediaDTO>(SQLQueryRaw, paramName).ToListAsync();
+                await _context.Database.CommitTransactionAsync();
+                return Ok(res);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception (you can use a logging framework here)
+                Console.WriteLine($"Error fetching media: {ex.Message}");
+                return StatusCode(500, "An error occurred while fetching media.");
+            }
+        }
 
 
 

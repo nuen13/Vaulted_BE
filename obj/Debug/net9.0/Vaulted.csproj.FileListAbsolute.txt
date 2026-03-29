@@ -164,3 +164,4 @@ D:\D-Main\Programming\REAL-PROJS\Media-Vaulted\Vaulted\obj\Debug\net9.0\refint\V
 D:\D-Main\Programming\REAL-PROJS\Media-Vaulted\Vaulted\obj\Debug\net9.0\Vaulted.pdb
 D:\D-Main\Programming\REAL-PROJS\Media-Vaulted\Vaulted\obj\Debug\net9.0\Vaulted.genruntimeconfig.cache
 D:\D-Main\Programming\REAL-PROJS\Media-Vaulted\Vaulted\obj\Debug\net9.0\ref\Vaulted.dll
+D:\D-Main\Programming\REAL-PROJS\Media-Vaulted\Vaulted\obj\Debug\net9.0\Vaulted.sourcelink.json
