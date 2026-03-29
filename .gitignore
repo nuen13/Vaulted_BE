@@ -1,0 +1,28 @@
+# ignore bin, and objetcs folders
+bin/
+obj/
+# ignore user specific files
+*.suo
+*.user
+# ignore build output
+*.dll
+*.exe
+*.pdb
+# ignore NuGet packages
+packages/
+# ignore Visual Studio Code settings
+.vscode/
+# ignore Rider settings
+.idea/
+# ignore ReSharper settings
+*.DotSettings.user
+# ignore log files
+*.log
+# ignore temporary files
+*.tmp
+# ignore publish output
+publish/
+# ignore test results
+TestResults/
+# ignore coverage reports
+coverage/
