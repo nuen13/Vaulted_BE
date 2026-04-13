@@ -75,7 +75,8 @@ namespace Vaulted.Controllers
 
 
 
-    }}
+    }
+    }
 
 
 }
