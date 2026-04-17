@@ -52,3 +52,17 @@ BEGIN
 END
 
 
+-- Update comment content and rating by comment id
+CREATE OR ALTER PROCEDURE UpdateCommentById
+    @CommentId UNIQUEIDENTIFIER,
+    @Content NVARCHAR(MAX),
+    @Rating INT
+AS
+BEGIN
+    SET NOCOUNT ON; -- Stops 'rows affected' messages from messing with EF Core
+
+    UPDATE Comments
+    SET Content = @Content, Rating = @Rating
+    WHERE Id = @CommentId;
+END
+GO

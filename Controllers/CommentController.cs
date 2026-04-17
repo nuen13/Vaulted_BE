@@ -72,11 +72,57 @@ namespace Vaulted.Controllers
                 Console.WriteLine($"Error fetching comments: {ex.Message}");
                 return StatusCode(500, "An error occurred while fetching comments.");
             }
+        }
 
+        [HttpPut("update-comment-by-id/{commentId}")]
+        public async Task<IActionResult> UpdateCommentById(Guid commentId, [FromBody] ReviewUpdateDTO reviewUpdateDTO)
+        {
+            try
+            {
+                await _context.Database.BeginTransactionAsync();
 
+                string SQLQueryRaw = "EXEC UpdateCommentById @CommentId, @Content, @Rating";
+                var parameters = new[]
+                {
+                    new SqlParameter("@CommentId", commentId),
+                    new SqlParameter("@Content", reviewUpdateDTO.Content),
+                    new SqlParameter("@Rating", reviewUpdateDTO.Rating)
+                };
+                await _context.Database.ExecuteSqlRawAsync(SQLQueryRaw, parameters);
+                await _context.Database.CommitTransactionAsync();
+                return Ok("Comment updated successfully.");
+            }
+            catch (Exception ex)
+            {
+                // Log the exception (you can use a logging framework here)
+                Console.WriteLine($"Error updating comment: {ex.Message}");
+                return StatusCode(500, "An error occurred while updating the comment.");
+            }
 
+        }
+
+        [HttpDelete("delete-comment-by-id/{commentId}")]
+        public async Task<IActionResult> DeleteCommentById(Guid commentId)
+        {
+            try
+            {
+                await _context.Database.BeginTransactionAsync();
+
+                string SQLQueryRaw = "EXEC DeleteCommentById @CommentId";
+                var parameters = new[]
+                {
+                    new SqlParameter("@CommentId", commentId)
+                };
+                await _context.Database.ExecuteSqlRawAsync(SQLQueryRaw, parameters);
+                await _context.Database.CommitTransactionAsync();
+                return Ok("Comment deleted successfully.");
+            }
+            catch (Exception ex)
+            {
+                // Log the exception (you can use a logging framework here)
+                Console.WriteLine($"Error deleting comment: {ex.Message}");
+                return StatusCode(500, "An error occurred while deleting the comment.");
+            }
+        }
     }
-    }
-
-
 }

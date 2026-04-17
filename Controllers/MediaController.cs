@@ -141,6 +141,29 @@ namespace Vaulted.Controllers
 
         }
 
+        [HttpGet("get-media-by-status/{status}")]
+        public async Task<IActionResult> GetMediaByStatus(string status)
+        {
+            try
+            {
+                await _context.Database.BeginTransactionAsync();
+
+                SqlParameter paramStatus = new SqlParameter("@Status", System.Data.SqlDbType.NVarChar, 50) { Value = status };
+
+                string SQLQueryRaw = $"EXEC GetMediaItemByStatus @Status = '{status}'";
+                var res = await _context.Database.SqlQueryRaw<MediaDTO>(SQLQueryRaw, paramStatus).ToListAsync();
+                await _context.Database.CommitTransactionAsync();
+                return Ok(res);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception (you can use a logging framework here)
+                Console.WriteLine($"Error fetching media: {ex.Message}");
+                return StatusCode(500, "An error occurred while fetching media.");
+            }
+
+        }
+
 
         [HttpPost("create-media")]
         public async Task<IActionResult> CreateMedia([FromBody] MediaCreatedDTO dto)
@@ -167,6 +190,30 @@ namespace Vaulted.Controllers
                 Console.WriteLine($"Error: {ex.Message}");
                 return StatusCode(500, "An error occurred.");
             }
+        }   
+
+        [HttpGet("get-media-by-categoryId-and-status/categoryId={categoryId}&status={status}")]
+        public async Task<IActionResult> GetMediaItemByCategoryIdAndStatus(int categoryId, string status)  
+        {
+            try
+            {
+                await _context.Database.BeginTransactionAsync();
+
+                SqlParameter paramCategoryId = new SqlParameter("@CategoryId", System.Data.SqlDbType.Int) { Value = categoryId };
+                SqlParameter paramStatus = new SqlParameter("@Status", System.Data.SqlDbType.NVarChar, 50) { Value = status };
+
+                string SQLQueryRaw = $"EXEC GetMediaItemByCategoryIdAndStatus @CategoryId = {categoryId}, @Status = '{status}'";
+                var res = await _context.Database.SqlQueryRaw<MediaDTO>(SQLQueryRaw, paramCategoryId, paramStatus).ToListAsync();
+                await _context.Database.CommitTransactionAsync();
+                return Ok(res);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception (you can use a logging framework here)
+                Console.WriteLine($"Error fetching media: {ex.Message}");
+                return StatusCode(500, "An error occurred while fetching media.");
+            }
+
         }
 
 
@@ -196,6 +243,51 @@ namespace Vaulted.Controllers
             }
         }
 
+        [HttpPut("update-media-status/{id}")]
+        public async Task<IActionResult> UpdateMediaStatus(Guid id, [FromBody] MediaStatusDTO dto)
+        {
+            try
+            {
+                var pId = new SqlParameter("@MediaId", id);
+                var pStatus = new SqlParameter("@Status", dto.Status ?? (object)DBNull.Value);
+
+                await _context.Database.ExecuteSqlRawAsync(
+                    "EXEC UpdateMediaStatusById @MediaId, @Status",
+                    pId, pStatus
+                );
+
+                return Ok("Media status updated successfully.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error: {ex.Message}");
+                return StatusCode(500, "An error occurred.");
+            }
+        }
+
+
+        [HttpPut("update-media-average-score/{id}")]
+        public async Task<IActionResult> UpdateMediaAverageScore(Guid id, [FromBody] AverageScoreDTO dto)
+        {
+            try
+            {
+                var pId = new SqlParameter("@MediaId", id);
+                var pAvgScore = new SqlParameter("@AverageScore", dto.AverageScore);
+
+                await _context.Database.ExecuteSqlRawAsync(
+                    "EXEC UpdateMediaScoreById @MediaId, @AverageScore",
+                    pId, pAvgScore
+                );
+            
+                return Ok("Media average score updated successfully.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error: {ex.Message}");
+                return StatusCode(500, "An error occurred.");
+            }
+        }
+        
 
         [HttpDelete("delete-media/{id}")]
         public async Task<IActionResult> DeleteMedia(Guid id)
@@ -218,5 +310,8 @@ namespace Vaulted.Controllers
             }
 
         }
+
+
+
     }
 }
