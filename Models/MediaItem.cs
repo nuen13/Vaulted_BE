@@ -13,7 +13,7 @@ public partial class MediaItem
 
     public string? CoverPhotoUrl { get; set; }
 
-    public decimal? AverageScore { get; set; }
+    public decimal? AverageRating { get; set; }
 
     public string? Status { get; set; }
 
@@ -27,9 +27,9 @@ public partial class MediaItem
 
     public virtual MediaCategory Category { get; set; } = null!;
 
-    public virtual ICollection<Comment> Comments { get; set; } = new List<Comment>();
-
     public virtual ICollection<MediaPhoto> MediaPhotos { get; set; } = new List<MediaPhoto>();
 
     public virtual ICollection<MediaQuote> MediaQuotes { get; set; } = new List<MediaQuote>();
+
+    public virtual ICollection<Review> Reviews { get; set; } = new List<Review>();
 }

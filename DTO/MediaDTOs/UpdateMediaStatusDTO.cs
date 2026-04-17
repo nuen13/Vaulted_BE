@@ -1,4 +1,4 @@
-public class MediaStatusDTO
+public class UpdateMediaStatusDTO
     {
         public string? Status { get; set; }
     }

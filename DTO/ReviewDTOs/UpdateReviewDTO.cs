@@ -1,4 +1,4 @@
-public class ReviewUpdateDTO
+public class UpdateReviewDTO
 {
     public string? Content { get; set; }
 

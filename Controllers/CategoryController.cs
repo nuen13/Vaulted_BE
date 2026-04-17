@@ -24,14 +24,16 @@ namespace Vaulted.Controllers
             _context = context;
         }
 
-        [HttpGet("get-all-current-categories")]
-        public async Task<IActionResult> GetAllCurrentCategories()
+
+        // ------------ GET ------------ //
+        [HttpGet("get-all-categories")]
+        public async Task<IActionResult> GetAllCategories()
         {
             try
             {
                 await _context.Database.BeginTransactionAsync();
 
-                string SQLQueryRaw = "EXEC GetAllCurrentCategories";
+                string SQLQueryRaw = "EXEC GetAllCategories";
                 var res = await _context.Database.SqlQueryRaw<CategoryDTO>(SQLQueryRaw).ToListAsync();
                 await _context.Database.CommitTransactionAsync();
                 return Ok(res);
@@ -45,6 +47,81 @@ namespace Vaulted.Controllers
         }
 
 
+        // ------------ POST ------------ //
+        [HttpPost("add-category")]
+        public async Task<IActionResult> AddCategory([FromBody] CreateCategoryDTO categoryCreatedDTO)
+        {
+            try
+            {
+                await _context.Database.BeginTransactionAsync();
 
+                string SQLQueryRaw = "EXEC AddCategory @Name";
+                var parameters = new[]
+                {
+                    new SqlParameter("@Name", categoryCreatedDTO.Name)
+                };
+                await _context.Database.ExecuteSqlRawAsync(SQLQueryRaw, parameters);
+                await _context.Database.CommitTransactionAsync();
+                return Ok("Category added successfully.");
+            }
+            catch (Exception ex)
+            {
+                // Log the exception (you can use a logging framework here)
+                Console.WriteLine($"Error adding category: {ex.Message}");
+                return StatusCode(500, "An error occurred while adding the category.");
+            }
+        }
+
+        // ------------ PUT ------------ //
+        [HttpPut("update-category/{id}")]
+        public async Task<IActionResult> UpdateCategory(int id, [FromBody] UpdateCategoryDTO updateCategoryDTO)
+        {
+            try
+            {
+                await _context.Database.BeginTransactionAsync();
+
+                string SQLQueryRaw = "EXEC UpdateCategoryById @CategoryId, @Name";
+                var parameters = new[]
+                {
+                    new SqlParameter("@CategoryId", updateCategoryDTO.Id),
+                    new SqlParameter("@Name", updateCategoryDTO.Name)
+                };
+                await _context.Database.ExecuteSqlRawAsync(SQLQueryRaw, parameters);
+                await _context.Database.CommitTransactionAsync();
+                return Ok("Category updated successfully.");
+            }
+            catch (Exception ex)
+            {
+                // Log the exception (you can use a logging framework here)
+                Console.WriteLine($"Error updating category: {ex.Message}");
+                return StatusCode(500, "An error occurred while updating the category.");
+            }
+        }
+
+        // ------------ DELETE ------------ //
+        [HttpDelete("delete-category/{id}")]
+        public async Task<IActionResult> DeleteCategory(int id)
+        {   
+            try
+            {
+                await _context.Database.BeginTransactionAsync();
+
+                var pId = new SqlParameter("@Id", id);
+
+                await _context.Database.ExecuteSqlRawAsync(
+                    "EXEC DeleteCategoryById @Id",
+                    pId
+                );
+
+                await _context.Database.CommitTransactionAsync();
+                return Ok("Category deleted successfully.");
+            }
+            catch (Exception ex)
+            {
+                // Log the exception (you can use a logging framework here)
+                Console.WriteLine($"Error deleting category: {ex.Message}");
+                return StatusCode(500, "An error occurred while deleting the category.");
+            }
+        }
     }
 }

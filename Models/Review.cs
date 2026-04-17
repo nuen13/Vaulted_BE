@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Vaulted.Models;
 
-public partial class Comment
+public partial class Review
 {
     public Guid Id { get; set; }
 
