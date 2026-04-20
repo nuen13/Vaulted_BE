@@ -4,8 +4,11 @@
 CREATE OR ALTER PROCEDURE GetAllMedia
 AS 
 BEGIN
-    SET NOCOUNT ON;
-    SELECT * FROM MediaItems
+    SET NOCOUNT ON; -- Stops 'rows affected' messages from messing with EF Core
+
+    SELECT MediaItems.*, MediaCategories.Name AS CategoryName FROM MediaItems
+    INNER JOIN MediaCategories ON MediaItems.CategoryId = MediaCategories.Id
+    ORDER BY MediaItems.DateUpdated DESC; -- Default sorting by date updated
 END
 
 -- GET ALL MEDIA SORTED BY CATEGORY
@@ -29,6 +32,17 @@ BEGIN
     INNER JOIN MediaCategories ON MediaItems.CategoryId = MediaCategories.Id
     WHERE MediaItems.MediaTitle LIKE '%' + @SearchTerm + '%'
     ORDER BY MediaItems.MediaTitle
+END
+
+-- GET MEDIA BY ID
+CREATE OR ALTER PROCEDURE GetMediaById
+    @MediaId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT MediaItems.*, MediaCategories.Name AS CategoryName FROM MediaItems
+    INNER JOIN MediaCategories ON MediaItems.CategoryId = MediaCategories.Id
+    WHERE MediaItems.Id = @MediaId
 END
 
 

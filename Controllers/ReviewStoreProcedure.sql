@@ -15,7 +15,7 @@ BEGIN
     ORDER BY DateCreated DESC; -- Default sorting by date created
 END
 
-
+-
 
 -- POST -> ADD REVIEW TO MEDIA
 CREATE OR ALTER PROCEDURE AddReviewToMedia
@@ -32,6 +32,18 @@ END
 
 GO
 
+-- POST -> ADD REVIEW TO MEDIA BY MediaID
+CREATE OR ALTER PROCEDURE AddReviewToMediaByMediaId
+    @MediaId UNIQUEIDENTIFIER,
+    @Content NVARCHAR(MAX),
+    @Rating INT
+AS
+BEGIN
+    SET NOCOUNT ON; -- Stops 'rows affected' messages from messing with EF Core
+
+    INSERT INTO Reviews (MediaId, Rating, Content, DateCreated)
+    VALUES (@MediaId, @Rating, @Content, GETDATE());
+END
 
 
 -- PUT -> UPDATE REVIEW BY ID

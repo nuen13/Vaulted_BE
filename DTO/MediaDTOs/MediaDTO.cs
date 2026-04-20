@@ -9,7 +9,7 @@ public class MediaDTO
 
     public string? CoverPhotoUrl { get; set; }
 
-    public decimal? AverageScore { get; set; }
+    public decimal? AverageRating { get; set; }
 
     public string? Status { get; set; }
 

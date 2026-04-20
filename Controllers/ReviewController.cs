@@ -66,9 +66,14 @@ namespace Vaulted.Controllers
                 var parameters = new[]
                 {
                     new SqlParameter("@MediaId", createReviewDTO.MediaId),
+                    
+
                     new SqlParameter("@Content", createReviewDTO.Content),
                     new SqlParameter("@Rating", createReviewDTO.Rating)
                 };
+
+                
+
                 await _context.Database.ExecuteSqlRawAsync(SQLQueryRaw, parameters);
                 await _context.Database.CommitTransactionAsync();
                 return Ok("Review added successfully.");
@@ -78,7 +83,9 @@ namespace Vaulted.Controllers
                 Console.WriteLine($"Error adding review: {ex.Message}");
                 return StatusCode(500, "An error occurred while adding the review.");
             }
-        }
+        }   
+
+
 
 
         // ------------ PUT ------------ //

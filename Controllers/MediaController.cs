@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Net.Http.Headers;
 using System.Reflection;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.Data.SqlClient.DataClassification;
@@ -89,6 +90,29 @@ namespace Vaulted.Controllers
                 return StatusCode(500, "An error occurred while fetching media.");
             }
         }
+        // GET -> GET MEDIA BY MEDIA ID
+        // EXEC GetMediaById
+        [HttpGet("get-media-by-id/{id}")]
+        public async Task<IActionResult> GetMediaById(Guid id)
+        {
+            try
+            {
+                await _context.Database.BeginTransactionAsync();
+
+                SqlParameter paramId = new SqlParameter("@MediaId", System.Data.SqlDbType.UniqueIdentifier) { Value = id };
+
+                string SQLQueryRaw = $"EXEC GetMediaById @MediaId = '{id}'";
+                var res = await _context.Database.SqlQueryRaw<MediaByIdDTO>(SQLQueryRaw, paramId).ToListAsync();
+                await _context.Database.CommitTransactionAsync();
+                return Ok(res);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error fetching media: {ex.Message}");
+                return StatusCode(500, "An error occurred while fetching media.");
+            }
+        }
+
 
         // GET -> GET MEDIA BY CATEGORY ID
         // EXEC GetMediaByCategoryId
@@ -282,7 +306,32 @@ namespace Vaulted.Controllers
             try
             {
                 var pId = new SqlParameter("@MediaId", id);
-                var pAvgScore = new SqlParameter("@AverageRating", dto.AverageRating);
+                var reviewCount = _context.Reviews.Count(r => r.MediaId == id);
+                var newAverageRating = (double?)0.0;
+         
+
+                if (reviewCount == 0)
+                {
+                    newAverageRating = dto.AverageRating;
+                }
+                else
+                {
+                    var currentAverageRating = _context.Reviews.Where(r => r.MediaId == id).Average(r => r.Rating);
+                    
+
+                    // Formula: newAverageRating = (currentAverageRating * reviewCount + newRating) / (reviewCount + 1)
+
+                    // This works because we are essentially recalculating the average by adding the new rating to the total sum of ratings (currentAverageRating * reviewCount) and then dividing by the new total number of reviews (reviewCount + 1).
+
+                   
+
+                    // Cannot implicitly convert type 'double?' to 'double'. An explicit conversion exists (are you missing a cast?)
+
+                    newAverageRating = (currentAverageRating * reviewCount + dto.AverageRating) / (reviewCount + 1);
+                }
+
+
+                var pAvgScore = new SqlParameter("@AverageRating", newAverageRating);
 
                 await _context.Database.ExecuteSqlRawAsync(
                     "EXEC UpdateMediaRatingById @MediaId, @AverageRating",
