@@ -55,35 +55,30 @@ namespace Vaulted.Controllers
 
         // POST -> ADD REVIEW TO MEDIA
         // EXEC AddReviewToMedia @MediaId, @Content, @Rating
+        // Returns the created review and the media's recalculated averageRating.
+        // The procedure runs its own transaction.
         [HttpPost("add-review")]
         public async Task<IActionResult> AddReview([FromBody] CreateReviewDTO createReviewDTO)
         {
             try
             {
-                await _context.Database.BeginTransactionAsync();
-
                 string SQLQueryRaw = "EXEC AddReviewToMedia @MediaId, @Content, @Rating";
                 var parameters = new[]
                 {
                     new SqlParameter("@MediaId", createReviewDTO.MediaId),
-                    
-
-                    new SqlParameter("@Content", createReviewDTO.Content),
+                    new SqlParameter("@Content", createReviewDTO.Content ?? (object)DBNull.Value),
                     new SqlParameter("@Rating", createReviewDTO.Rating)
                 };
 
-                
-
-                await _context.Database.ExecuteSqlRawAsync(SQLQueryRaw, parameters);
-                await _context.Database.CommitTransactionAsync();
-                return Ok("Review added successfully.");
+                var res = await _context.Database.SqlQueryRaw<ReviewWithRatingDTO>(SQLQueryRaw, parameters).ToListAsync();
+                return Ok(res.FirstOrDefault());
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error adding review: {ex.Message}");
                 return StatusCode(500, "An error occurred while adding the review.");
             }
-        }   
+        }
 
 
 
@@ -91,24 +86,24 @@ namespace Vaulted.Controllers
         // ------------ PUT ------------ //
         // PUT -> UPDATE REVIEW BY ID
         // EXEC UpdateReviewById @ReviewId, @Content, @Rating
+        // Returns the updated review and the media's recalculated averageRating.
 
         [HttpPut("update-review-by-id/{reviewId}")]
         public async Task<IActionResult> UpdateReviewById(Guid reviewId, [FromBody] UpdateReviewDTO updateReviewDTO)
         {
             try
             {
-                await _context.Database.BeginTransactionAsync();
-
                 string SQLQueryRaw = "EXEC UpdateReviewById @ReviewId, @Content, @Rating";
                 var parameters = new[]
                 {
                     new SqlParameter("@ReviewId", reviewId),
-                    new SqlParameter("@Content", updateReviewDTO.Content),
+                    new SqlParameter("@Content", updateReviewDTO.Content ?? (object)DBNull.Value),
                     new SqlParameter("@Rating", updateReviewDTO.Rating)
                 };
-                await _context.Database.ExecuteSqlRawAsync(SQLQueryRaw, parameters);
-                await _context.Database.CommitTransactionAsync();
-                return Ok("Review updated successfully.");
+                var res = await _context.Database.SqlQueryRaw<ReviewWithRatingDTO>(SQLQueryRaw, parameters).ToListAsync();
+                var updated = res.FirstOrDefault();
+                if (updated == null) return NotFound("Review not found.");
+                return Ok(updated);
             }
             catch (Exception ex)
             {
@@ -123,21 +118,21 @@ namespace Vaulted.Controllers
         // ------------ DELETE ------------ //
         // DELETE -> DELETE REVIEW BY ID
         // EXEC DeleteReviewById @ReviewId
+        // Returns { mediaId, averageRating } after recalculation.
         [HttpDelete("delete-review-by-id/{reviewId}")]
         public async Task<IActionResult> DeleteReviewById(Guid reviewId)
         {
             try
             {
-                await _context.Database.BeginTransactionAsync();
-
                 string SQLQueryRaw = "EXEC DeleteReviewById @ReviewId";
                 var parameters = new[]
                 {
                     new SqlParameter("@ReviewId", reviewId)
                 };
-                await _context.Database.ExecuteSqlRawAsync(SQLQueryRaw, parameters);
-                await _context.Database.CommitTransactionAsync();
-                return Ok("Review deleted successfully.");
+                var res = await _context.Database.SqlQueryRaw<MediaRatingDTO>(SQLQueryRaw, parameters).ToListAsync();
+                var rating = res.FirstOrDefault();
+                if (rating == null) return NotFound("Review not found.");
+                return Ok(rating);
             }
             catch (Exception ex)
             {

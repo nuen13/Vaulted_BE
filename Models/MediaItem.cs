@@ -25,6 +25,10 @@ public partial class MediaItem
 
     public bool? Deleted { get; set; }
 
+    public bool Archived { get; set; }
+
+    public DateTime? DateArchived { get; set; }
+
     public virtual MediaCategory Category { get; set; } = null!;
 
     public virtual ICollection<MediaPhoto> MediaPhotos { get; set; } = new List<MediaPhoto>();

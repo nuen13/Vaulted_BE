@@ -9,5 +9,7 @@ public partial class MediaCategory
 
     public string Name { get; set; } = null!;
 
+    public string? Color { get; set; }
+
     public virtual ICollection<MediaItem> MediaItems { get; set; } = new List<MediaItem>();
 }

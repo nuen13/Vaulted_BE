@@ -13,5 +13,7 @@ public partial class MediaQuote
 
     public string? QuoteText { get; set; }
 
+    public int SortOrder { get; set; }
+
     public virtual MediaItem Media { get; set; } = null!;
 }

@@ -11,5 +11,7 @@ public partial class MediaPhoto
 
     public string? PhotoUrl { get; set; }
 
+    public int SortOrder { get; set; }
+
     public virtual MediaItem Media { get; set; } = null!;
 }

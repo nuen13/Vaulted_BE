@@ -27,14 +27,14 @@ namespace Vaulted.Controllers
         // ------------ GET ------------ // 
         // GET -> GET ALL MEDIA -> EXEC GetAllMedia
         [HttpGet("get-all-media")]
-        public async Task<IActionResult> GetAllMedia()
+        public async Task<IActionResult> GetAllMedia([FromQuery] bool archived = false)
         {
             try
             {
                 await _context.Database.BeginTransactionAsync();
 
-                string SQLQueryRaw = "EXEC GetAllMedia";
-                var res = await _context.Database.SqlQueryRaw<MediaDTO>(SQLQueryRaw).ToListAsync();
+                string SQLQueryRaw = "EXEC GetAllMedia @Archived";
+                var res = await _context.Database.SqlQueryRaw<MediaDTO>(SQLQueryRaw, ArchivedParam(archived)).ToListAsync();
                 await _context.Database.CommitTransactionAsync();
                 return Ok(res);
             }
@@ -56,7 +56,7 @@ namespace Vaulted.Controllers
                 await _context.Database.BeginTransactionAsync();
 
                 string SQLQueryRaw = "EXEC GetAllMediaSortedByCategory";
-                var res = await _context.Database.SqlQueryRaw<MediaSortedByCateDTO>(SQLQueryRaw).ToListAsync();
+                var res = await _context.Database.SqlQueryRaw<MediaSortedByCategoryDTO>(SQLQueryRaw).ToListAsync();
                 await _context.Database.CommitTransactionAsync();
                 return Ok(res);
             }
@@ -79,7 +79,7 @@ namespace Vaulted.Controllers
 
                 SqlParameter paramName = new SqlParameter("@SearchTerm", System.Data.SqlDbType.NVarChar, 100) { Value = searchTerm };
 
-                string SQLQueryRaw = $"EXEC SearchMediaByName @SearchTerm = '{searchTerm}'";
+                string SQLQueryRaw = "EXEC SearchMediaByName @SearchTerm";
                 var res = await _context.Database.SqlQueryRaw<MediaSearchedBySearchTermDTO>(SQLQueryRaw, paramName).ToListAsync();
                 await _context.Database.CommitTransactionAsync();
                 return Ok(res);
@@ -101,7 +101,7 @@ namespace Vaulted.Controllers
 
                 SqlParameter paramId = new SqlParameter("@MediaId", System.Data.SqlDbType.UniqueIdentifier) { Value = id };
 
-                string SQLQueryRaw = $"EXEC GetMediaById @MediaId = '{id}'";
+                string SQLQueryRaw = "EXEC GetMediaById @MediaId";
                 var res = await _context.Database.SqlQueryRaw<MediaByIdDTO>(SQLQueryRaw, paramId).ToListAsync();
                 await _context.Database.CommitTransactionAsync();
                 return Ok(res);
@@ -117,7 +117,7 @@ namespace Vaulted.Controllers
         // GET -> GET MEDIA BY CATEGORY ID
         // EXEC GetMediaByCategoryId
         [HttpGet("get-media-by-categoryid/{categoryId}")]
-        public async Task<IActionResult> GetMediaByCategoryId(int categoryId)
+        public async Task<IActionResult> GetMediaByCategoryId(int categoryId, [FromQuery] bool archived = false)
         {
             try
             {
@@ -125,8 +125,8 @@ namespace Vaulted.Controllers
 
                 SqlParameter paramCategoryId = new SqlParameter("@CategoryId", System.Data.SqlDbType.Int) { Value = categoryId };
 
-                string SQLQueryRaw = $"EXEC GetMediaByCategoryId @CategoryId = {categoryId}";
-                var res = await _context.Database.SqlQueryRaw<MediaByCategoryIdDTO>(SQLQueryRaw, paramCategoryId).ToListAsync();
+                string SQLQueryRaw = "EXEC GetMediaByCategoryId @CategoryId, @Archived";
+                var res = await _context.Database.SqlQueryRaw<MediaByCategoryIdDTO>(SQLQueryRaw, paramCategoryId, ArchivedParam(archived)).ToListAsync();
                 await _context.Database.CommitTransactionAsync();
                 return Ok(res);
             }
@@ -146,9 +146,9 @@ namespace Vaulted.Controllers
             {
                 await _context.Database.BeginTransactionAsync();
 
-                SqlParameter paramCategory = new SqlParameter("@Category", System.Data.SqlDbType.NVarChar, 50) { Value = categoryName };
+                SqlParameter paramCategory = new SqlParameter("@CategoryName", System.Data.SqlDbType.NVarChar, 50) { Value = categoryName };
 
-                string SQLQueryRaw = $"EXEC GetMediaByCategory @Category = '{categoryName}'";
+                string SQLQueryRaw = "EXEC GetMediaByCategoryName @CategoryName";
                 var res = await _context.Database.SqlQueryRaw<MediaByCategoryNameDTO>(SQLQueryRaw, paramCategory).ToListAsync();
                 await _context.Database.CommitTransactionAsync();
                 return Ok(res);
@@ -165,7 +165,7 @@ namespace Vaulted.Controllers
         // GET -> GET MEDIA BY STATUS
         // EXEC GetMediaItemByStatus
         [HttpGet("get-media-by-status/{status}")]
-        public async Task<IActionResult> GetMediaByStatus(string status)
+        public async Task<IActionResult> GetMediaByStatus(string status, [FromQuery] bool archived = false)
         {
             try
             {
@@ -173,8 +173,8 @@ namespace Vaulted.Controllers
 
                 SqlParameter paramStatus = new SqlParameter("@Status", System.Data.SqlDbType.NVarChar, 50) { Value = status };
 
-                string SQLQueryRaw = $"EXEC GetMediaItemByStatus @Status = '{status}'";
-                var res = await _context.Database.SqlQueryRaw<MediaByStatusDTO>(SQLQueryRaw, paramStatus).ToListAsync();
+                string SQLQueryRaw = "EXEC GetMediaItemByStatus @Status, @Archived";
+                var res = await _context.Database.SqlQueryRaw<MediaByStatusDTO>(SQLQueryRaw, paramStatus, ArchivedParam(archived)).ToListAsync();
                 await _context.Database.CommitTransactionAsync();
                 return Ok(res);
             }
@@ -190,7 +190,7 @@ namespace Vaulted.Controllers
         // GET -> GET MEDIA BY CATEGORY ID AND STATUS
         // EXEC GetMediaItemByCategoryIdAndStatus
         [HttpGet("get-media-by-categoryId-and-status/categoryId={categoryId}&status={status}")]
-        public async Task<IActionResult> GetMediaItemByCategoryIdAndStatus(int categoryId, string status)
+        public async Task<IActionResult> GetMediaItemByCategoryIdAndStatus(int categoryId, string status, [FromQuery] bool archived = false)
         {
             try
             {
@@ -199,8 +199,8 @@ namespace Vaulted.Controllers
                 SqlParameter paramCategoryId = new SqlParameter("@CategoryId", System.Data.SqlDbType.Int) { Value = categoryId };
                 SqlParameter paramStatus = new SqlParameter("@Status", System.Data.SqlDbType.NVarChar, 50) { Value = status };
 
-                string SQLQueryRaw = $"EXEC GetMediaItemByCategoryIdAndStatus @CategoryId = {categoryId}, @Status = '{status}'";
-                var res = await _context.Database.SqlQueryRaw<MediaByCategoryAndStatusDTO>(SQLQueryRaw, paramCategoryId, paramStatus).ToListAsync();
+                string SQLQueryRaw = "EXEC GetMediaItemByCategoryIdAndStatus @CategoryId, @Status, @Archived";
+                var res = await _context.Database.SqlQueryRaw<MediaByCategoryAndStatusDTO>(SQLQueryRaw, paramCategoryId, paramStatus, ArchivedParam(archived)).ToListAsync();
                 await _context.Database.CommitTransactionAsync();
                 return Ok(res);
             }
@@ -298,47 +298,79 @@ namespace Vaulted.Controllers
             }
         }
 
-        // PUT -> UPDATE MEDIA RATING  BY ID
-        // EXEC UpdateMediaRatingById
-        [HttpPut("update-media-rating/{id}")]
-        public async Task<IActionResult> UpdateMediaRating(Guid id, [FromBody] UpdateMediaRatingDTO dto)
+        // Average rating is recalculated server-side whenever a review is added,
+        // updated, or deleted (see ReviewStoreProcedure.sql), so there is no rating endpoint.
+
+
+        // PUT -> ARCHIVE / UNARCHIVE MEDIA BY ID
+        // EXEC SetMediaArchived @MediaId, @Archived
+        // Archived items leave the normal lists but keep their reviews, photos and rating.
+        [HttpPut("set-archived/{id}")]
+        public async Task<IActionResult> SetArchived(Guid id, [FromBody] SetArchivedDTO dto)
         {
             try
             {
                 var pId = new SqlParameter("@MediaId", id);
-                var reviewCount = _context.Reviews.Count(r => r.MediaId == id);
-                var newAverageRating = (double?)0.0;
-         
+                var res = await _context.Database.SqlQueryRaw<MediaDTO>(
+                    "EXEC SetMediaArchived @MediaId, @Archived",
+                    pId, ArchivedParam(dto.Archived)
+                ).ToListAsync();
 
-                if (reviewCount == 0)
+                var item = res.FirstOrDefault();
+                if (item == null) return NotFound("Media not found.");
+                return Ok(item);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error: {ex.Message}");
+                return StatusCode(500, "An error occurred.");
+            }
+        }
+
+        private static SqlParameter ArchivedParam(bool archived) =>
+            new SqlParameter("@Archived", System.Data.SqlDbType.Bit) { Value = archived };
+
+
+        // PUT -> BULK EDIT (archive view): unarchive, set status, set category or delete many items
+        // EXEC BulkUpdateMediaItems @Ids, @Archived, @Status, @CategoryId, @Deleted
+        // Returns { updatedCount }
+        [HttpPut("bulk-update")]
+        public async Task<IActionResult> BulkUpdate([FromBody] BulkUpdateMediaDTO dto)
+        {
+            try
+            {
+                if (dto.Ids == null || dto.Ids.Count == 0)
+                    return BadRequest("Pick at least one item.");
+                if (dto.Archived == null && dto.Status == null && dto.CategoryId == null && dto.Deleted == null)
+                    return BadRequest("Nothing to change.");
+
+                var status = dto.Status?.Trim();
+                if (status != null)
                 {
-                    newAverageRating = dto.AverageRating;
+                    var statuses = await _context.Database.SqlQueryRaw<StatusDTO>("EXEC GetAllStatuses").ToListAsync();
+                    var match = statuses.FirstOrDefault(s => string.Equals(s.Name, status, StringComparison.OrdinalIgnoreCase));
+                    if (match == null) return BadRequest("That status doesn't exist.");
+                    status = match.Name;
                 }
-                else
+                if (dto.CategoryId != null)
                 {
-                    var currentAverageRating = _context.Reviews.Where(r => r.MediaId == id).Average(r => r.Rating);
-                    
-
-                    // Formula: newAverageRating = (currentAverageRating * reviewCount + newRating) / (reviewCount + 1)
-
-                    // This works because we are essentially recalculating the average by adding the new rating to the total sum of ratings (currentAverageRating * reviewCount) and then dividing by the new total number of reviews (reviewCount + 1).
-
-                   
-
-                    // Cannot implicitly convert type 'double?' to 'double'. An explicit conversion exists (are you missing a cast?)
-
-                    newAverageRating = (currentAverageRating * reviewCount + dto.AverageRating) / (reviewCount + 1);
+                    var categories = await _context.Database.SqlQueryRaw<CategoryDTO>("EXEC GetAllCategories").ToListAsync();
+                    if (!categories.Any(c => c.Id == dto.CategoryId)) return BadRequest("That category doesn't exist.");
                 }
 
+                static SqlParameter Nullable(string name, System.Data.SqlDbType type, object? value) =>
+                    new SqlParameter(name, type) { Value = value ?? DBNull.Value };
 
-                var pAvgScore = new SqlParameter("@AverageRating", newAverageRating);
+                var res = await _context.Database.SqlQueryRaw<BulkUpdateResultDTO>(
+                    "EXEC BulkUpdateMediaItems @Ids, @Archived, @Status, @CategoryId, @Deleted",
+                    new SqlParameter("@Ids", System.Text.Json.JsonSerializer.Serialize(dto.Ids)),
+                    Nullable("@Archived", System.Data.SqlDbType.Bit, dto.Archived),
+                    Nullable("@Status", System.Data.SqlDbType.VarChar, status),
+                    Nullable("@CategoryId", System.Data.SqlDbType.Int, dto.CategoryId),
+                    Nullable("@Deleted", System.Data.SqlDbType.Bit, dto.Deleted)
+                ).ToListAsync();
 
-                await _context.Database.ExecuteSqlRawAsync(
-                    "EXEC UpdateMediaRatingById @MediaId, @AverageRating",
-                    pId, pAvgScore
-                );
-
-                return Ok("Media rating updated successfully.");
+                return Ok(res.FirstOrDefault() ?? new BulkUpdateResultDTO());
             }
             catch (Exception ex)
             {
@@ -352,14 +384,14 @@ namespace Vaulted.Controllers
 
 
 
-        // DELETE -> DELETE MEDIA BY ID
+        // DELETE -> DELETE MEDIA BY ID (soft delete)
         // EXEC DeleteMediaItemById
         [HttpDelete("delete-media/{id}")]
         public async Task<IActionResult> DeleteMedia(Guid id)
         {
             try
             {
-                var pId = new SqlParameter("@Id", id);
+                var pId = new SqlParameter("@MediaId", id);
 
                 await _context.Database.ExecuteSqlRawAsync(
                     "EXEC DeleteMediaItemById @MediaId",

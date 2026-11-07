@@ -46,7 +46,7 @@ public partial class ApplicationContext : DbContext
             entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
             entity.Property(e => e.AverageRating)
                 .HasDefaultValue(0m)
-                .HasColumnType("decimal(3, 2)");
+                .HasColumnType("decimal(4, 2)");
             entity.Property(e => e.CoverPhotoUrl)
                 .HasMaxLength(500)
                 .IsUnicode(false);
