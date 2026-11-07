@@ -26,3 +26,5 @@ publish/
 TestResults/
 # ignore coverage reports
 coverage/
+# local settings (connection string with password)
+appsettings.Development.json
