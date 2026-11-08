@@ -1,0 +1,16 @@
+**/bin
+**/obj
+**/.git
+**/.DS_Store
+.claude
+.vscode
+.idea
+# local secrets never go into the image
+appsettings.Development.json
+Vaulted_FE/.env
+Vaulted_FE/.env.*
+deploy/cloudrun.env.yaml
+# rebuilt inside the image
+Vaulted_FE/node_modules
+Vaulted_FE/dist
+deploy/.db-connection

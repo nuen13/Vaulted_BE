@@ -28,3 +28,8 @@ TestResults/
 coverage/
 # local settings (connection string with password)
 appsettings.Development.json
+# Cloud Run settings (allowed emails etc.)
+deploy/cloudrun.env.yaml
+deploy/.db-connection
+# Python bytecode
+__pycache__/
