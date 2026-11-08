@@ -131,9 +131,11 @@ GO
 
 -- DELETE -> DELETE REVIEW BY ID
 -- Returns the media id and its new AverageRating.
+-- The author or an admin can delete it.
 CREATE OR ALTER PROCEDURE DeleteReviewById
     @ReviewId UNIQUEIDENTIFIER,
-    @UserId UNIQUEIDENTIFIER
+    @UserId UNIQUEIDENTIFIER,
+    @IsAdmin BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -144,7 +146,7 @@ BEGIN
 
     IF @MediaId IS NULL
         THROW 50404, 'Review not found.', 1;
-    IF @AuthorId IS NOT NULL AND @AuthorId <> @UserId
+    IF @IsAdmin = 0 AND @AuthorId IS NOT NULL AND @AuthorId <> @UserId
         THROW 50403, 'Only the person who wrote this review can delete it.', 1;
 
     BEGIN TRANSACTION;

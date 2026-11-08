@@ -190,11 +190,12 @@ GO
 
 -- DELETE -> DELETE MEDIA BY ID
 -- Soft delete: reviews/photos/quotes reference the item without cascade, so a hard delete fails.
--- Only the person who added the item can delete it (items with no creator: anyone).
+-- Only the person who added the item (or an admin) can delete it (items with no creator: anyone).
 -- THROW 50404 = not found, 50403 = not yours.
 CREATE OR ALTER PROCEDURE DeleteMediaItemById
     @MediaId UNIQUEIDENTIFIER,
-    @UserId UNIQUEIDENTIFIER
+    @UserId UNIQUEIDENTIFIER,
+    @IsAdmin BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -205,7 +206,7 @@ BEGIN
 
     IF @Found = 0
         THROW 50404, 'Media not found.', 1;
-    IF @CreatorId IS NOT NULL AND @CreatorId <> @UserId
+    IF @IsAdmin = 0 AND @CreatorId IS NOT NULL AND @CreatorId <> @UserId
         THROW 50403, 'Only the person who added this can delete it.', 1;
 
     UPDATE MediaItems
@@ -219,12 +220,13 @@ GO
 -- PUT -> ARCHIVE / UNARCHIVE MEDIA BY ID
 -- Archiving hides an item from the normal lists without touching its reviews, photos or rating.
 -- DateUpdated is left alone so it returns to the same place in the list when unarchived.
--- Only the person who added the item can archive/unarchive it (items with no creator: anyone).
--- Returns the item. THROW 50404 = not found, 50403 = not yours.
+-- Only the person who added the item (or an admin) can archive/unarchive it (items with no
+-- creator: anyone). Returns the item. THROW 50404 = not found, 50403 = not yours.
 CREATE OR ALTER PROCEDURE SetMediaArchived
     @MediaId UNIQUEIDENTIFIER,
     @Archived BIT,
-    @UserId UNIQUEIDENTIFIER
+    @UserId UNIQUEIDENTIFIER,
+    @IsAdmin BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -235,7 +237,7 @@ BEGIN
 
     IF @Found = 0
         THROW 50404, 'Media not found.', 1;
-    IF @CreatorId IS NOT NULL AND @CreatorId <> @UserId
+    IF @IsAdmin = 0 AND @CreatorId IS NOT NULL AND @CreatorId <> @UserId
         THROW 50403, 'Only the person who added this can archive it.', 1;
 
     UPDATE MediaItems
@@ -255,7 +257,7 @@ GO
 -- archive/unarchive, set status, set category, delete (soft).
 -- DateUpdated is left alone so items keep their place in the list.
 -- Archiving/unarchiving or deleting only touches items the caller added (or items with no
--- creator); others are skipped and counted in SkippedCount.
+-- creator); others are skipped and counted in SkippedCount. Admins may touch every item.
 -- Returns how many items were updated and how many were skipped.
 CREATE OR ALTER PROCEDURE BulkUpdateMediaItems
     @Ids NVARCHAR(MAX),
@@ -263,12 +265,13 @@ CREATE OR ALTER PROCEDURE BulkUpdateMediaItems
     @Status VARCHAR(50) = NULL,
     @CategoryId INT = NULL,
     @Deleted BIT = NULL,
-    @UserId UNIQUEIDENTIFIER
+    @UserId UNIQUEIDENTIFIER,
+    @IsAdmin BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @OwnerOnly BIT = CASE WHEN @Archived IS NOT NULL OR @Deleted IS NOT NULL THEN 1 ELSE 0 END;
+    DECLARE @OwnerOnly BIT = CASE WHEN @IsAdmin = 0 AND (@Archived IS NOT NULL OR @Deleted IS NOT NULL) THEN 1 ELSE 0 END;
 
     DECLARE @Skipped INT = CASE WHEN @OwnerOnly = 0 THEN 0 ELSE (
         SELECT COUNT(*) FROM MediaItems

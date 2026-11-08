@@ -7,6 +7,10 @@ public class UserDTO
     public string DisplayName { get; set; } = "";
 
     public string? PictureUrl { get; set; }
+
+    // Not a column: set by the API from Auth:AdminEmails, so the frontend can show admin actions
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public bool IsAdmin { get; set; }
 }
 
 // POST api/Auth/google: the ID token ("credential") from Google's sign-in button

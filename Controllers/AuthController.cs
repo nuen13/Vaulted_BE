@@ -51,8 +51,10 @@ namespace Vaulted.Controllers
             }
 
             var allowed = _config.GetSection("Auth:AllowedEmails").Get<string[]>() ?? Array.Empty<string>();
+            // Admins (Auth:AdminEmails) are always let in
             if (!payload.EmailVerified
-                || !allowed.Any(e => string.Equals(e.Trim(), payload.Email, StringComparison.OrdinalIgnoreCase)))
+                || (!allowed.Any(e => string.Equals(e.Trim(), payload.Email, StringComparison.OrdinalIgnoreCase))
+                    && !CurrentUser.IsAdminEmail(_config, payload.Email)))
             {
                 return StatusCode(403, $"{payload.Email} isn't on the invite list. Ask the vault owner to add you.");
             }
@@ -72,6 +74,7 @@ namespace Vaulted.Controllers
                 ).ToListAsync();
 
                 var user = users.First();
+                user.IsAdmin = CurrentUser.IsAdminEmail(_config, user.Email);
                 var expiresAt = DateTime.UtcNow.AddDays(_config.GetValue("Auth:TokenLifetimeDays", 30));
 
                 return Ok(new SignInResultDTO
@@ -97,7 +100,9 @@ namespace Vaulted.Controllers
             ).ToListAsync();
 
             var user = res.FirstOrDefault();
-            return user == null ? Unauthorized() : Ok(user);
+            if (user == null) return Unauthorized();
+            user.IsAdmin = CurrentUser.IsAdminEmail(_config, user.Email);
+            return Ok(user);
         }
 
         // GET -> EVERYONE IN THE VAULT (to show who added an item)

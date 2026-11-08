@@ -17,10 +17,12 @@ namespace Vaulted.Controllers
     public class ReviewController : ControllerBase
     {
         private readonly ApplicationContext _context;
+        private readonly IConfiguration _config;
 
-        public ReviewController(ApplicationContext context)
+        public ReviewController(ApplicationContext context, IConfiguration config)
         {
             _context = context;
+            _config = config;
         }
 
         // ------------ GET ------------ //
@@ -123,19 +125,20 @@ namespace Vaulted.Controllers
 
         // ------------ DELETE ------------ //
         // DELETE -> DELETE REVIEW BY ID
-        // EXEC DeleteReviewById @ReviewId, @UserId
-        // Only the review's author can delete it (403 otherwise).
+        // EXEC DeleteReviewById @ReviewId, @UserId, @IsAdmin
+        // Only the review's author or an admin can delete it (403 otherwise).
         // Returns { mediaId, averageRating } after recalculation.
         [HttpDelete("delete-review-by-id/{reviewId}")]
         public async Task<IActionResult> DeleteReviewById(Guid reviewId)
         {
             try
             {
-                string SQLQueryRaw = "EXEC DeleteReviewById @ReviewId, @UserId";
+                string SQLQueryRaw = "EXEC DeleteReviewById @ReviewId, @UserId, @IsAdmin";
                 var parameters = new[]
                 {
                     new SqlParameter("@ReviewId", reviewId),
-                    new SqlParameter("@UserId", User.GetUserId())
+                    new SqlParameter("@UserId", User.GetUserId()),
+                    new SqlParameter("@IsAdmin", System.Data.SqlDbType.Bit) { Value = User.IsAdmin(_config) }
                 };
                 var res = await _context.Database.SqlQueryRaw<MediaRatingDTO>(SQLQueryRaw, parameters).ToListAsync();
                 var rating = res.FirstOrDefault();
