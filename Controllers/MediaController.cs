@@ -10,6 +10,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Data.SqlClient.DataClassification;
 using Microsoft.EntityFrameworkCore;
 using Vaulted.Models;
+using Vaulted.Auth;
 namespace Vaulted.Controllers
 {
 
@@ -228,10 +229,11 @@ namespace Vaulted.Controllers
                 var pCover = new SqlParameter("@CoverPhotoUrl", dto.CoverPhotoUrl ?? (object)DBNull.Value);
                 var pStatus = new SqlParameter("@Status", dto.Status ?? (object)DBNull.Value);
                 var pLink = new SqlParameter("@MediaLink", dto.MediaLink ?? (object)DBNull.Value);
+                var pUser = new SqlParameter("@CreatedByUserId", User.GetUserId());
 
                 await _context.Database.ExecuteSqlRawAsync(
-                    "EXEC InsertMediaItem @MediaTitle, @CategoryId, @CoverPhotoUrl, @Status, @MediaLink",
-                    pTitle, pCat, pCover, pStatus, pLink
+                    "EXEC InsertMediaItem @MediaTitle, @CategoryId, @CoverPhotoUrl, @Status, @MediaLink, @CreatedByUserId",
+                    pTitle, pCat, pCover, pStatus, pLink, pUser
                 );
 
                 return Ok("Media created successfully.");
@@ -305,15 +307,17 @@ namespace Vaulted.Controllers
         // PUT -> ARCHIVE / UNARCHIVE MEDIA BY ID
         // EXEC SetMediaArchived @MediaId, @Archived
         // Archived items leave the normal lists but keep their reviews, photos and rating.
+        // Only the person who added the item can archive/unarchive it (403 otherwise).
         [HttpPut("set-archived/{id}")]
         public async Task<IActionResult> SetArchived(Guid id, [FromBody] SetArchivedDTO dto)
         {
             try
             {
                 var pId = new SqlParameter("@MediaId", id);
+                var pUser = new SqlParameter("@UserId", User.GetUserId());
                 var res = await _context.Database.SqlQueryRaw<MediaDTO>(
-                    "EXEC SetMediaArchived @MediaId, @Archived",
-                    pId, ArchivedParam(dto.Archived)
+                    "EXEC SetMediaArchived @MediaId, @Archived, @UserId",
+                    pId, ArchivedParam(dto.Archived), pUser
                 ).ToListAsync();
 
                 var item = res.FirstOrDefault();
@@ -322,6 +326,7 @@ namespace Vaulted.Controllers
             }
             catch (Exception ex)
             {
+                if (SqlErrors.ToResult(ex) is { } known) return known;
                 Console.WriteLine($"Error: {ex.Message}");
                 return StatusCode(500, "An error occurred.");
             }
@@ -333,7 +338,8 @@ namespace Vaulted.Controllers
 
         // PUT -> BULK EDIT (archive view): unarchive, set status, set category or delete many items
         // EXEC BulkUpdateMediaItems @Ids, @Archived, @Status, @CategoryId, @Deleted
-        // Returns { updatedCount }
+        // Archive/unarchive and delete only apply to items the caller added; others are skipped.
+        // Returns { updatedCount, skippedCount }
         [HttpPut("bulk-update")]
         public async Task<IActionResult> BulkUpdate([FromBody] BulkUpdateMediaDTO dto)
         {
@@ -362,12 +368,13 @@ namespace Vaulted.Controllers
                     new SqlParameter(name, type) { Value = value ?? DBNull.Value };
 
                 var res = await _context.Database.SqlQueryRaw<BulkUpdateResultDTO>(
-                    "EXEC BulkUpdateMediaItems @Ids, @Archived, @Status, @CategoryId, @Deleted",
+                    "EXEC BulkUpdateMediaItems @Ids, @Archived, @Status, @CategoryId, @Deleted, @UserId",
                     new SqlParameter("@Ids", System.Text.Json.JsonSerializer.Serialize(dto.Ids)),
                     Nullable("@Archived", System.Data.SqlDbType.Bit, dto.Archived),
                     Nullable("@Status", System.Data.SqlDbType.VarChar, status),
                     Nullable("@CategoryId", System.Data.SqlDbType.Int, dto.CategoryId),
-                    Nullable("@Deleted", System.Data.SqlDbType.Bit, dto.Deleted)
+                    Nullable("@Deleted", System.Data.SqlDbType.Bit, dto.Deleted),
+                    new SqlParameter("@UserId", User.GetUserId())
                 ).ToListAsync();
 
                 return Ok(res.FirstOrDefault() ?? new BulkUpdateResultDTO());
@@ -384,7 +391,7 @@ namespace Vaulted.Controllers
 
 
 
-        // DELETE -> DELETE MEDIA BY ID (soft delete)
+        // DELETE -> DELETE MEDIA BY ID (soft delete, only by the person who added it)
         // EXEC DeleteMediaItemById
         [HttpDelete("delete-media/{id}")]
         public async Task<IActionResult> DeleteMedia(Guid id)
@@ -393,15 +400,18 @@ namespace Vaulted.Controllers
             {
                 var pId = new SqlParameter("@MediaId", id);
 
+                var pUser = new SqlParameter("@UserId", User.GetUserId());
+
                 await _context.Database.ExecuteSqlRawAsync(
-                    "EXEC DeleteMediaItemById @MediaId",
-                    pId
+                    "EXEC DeleteMediaItemById @MediaId, @UserId",
+                    pId, pUser
                 );
 
                 return Ok("Media deleted successfully.");
             }
             catch (Exception ex)
             {
+                if (SqlErrors.ToResult(ex) is { } known) return known;
                 Console.WriteLine($"Error: {ex.Message}");
                 return StatusCode(500, "An error occurred.");
             }

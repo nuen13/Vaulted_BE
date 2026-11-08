@@ -23,6 +23,9 @@ public class MediaDTO
     public bool Archived { get; set; }
 
     public DateTime? DateArchived { get; set; }
+
+    // Who added it; only they can archive or delete it (null = added before sign-in, anyone can)
+    public Guid? CreatedByUserId { get; set; }
 }
 
 public class SetArchivedDTO
@@ -42,4 +45,7 @@ public class BulkUpdateMediaDTO
 public class BulkUpdateResultDTO
 {
     public int UpdatedCount { get; set; }
+
+    // Items left alone because someone else added them (archive/delete are creator-only)
+    public int SkippedCount { get; set; }
 }

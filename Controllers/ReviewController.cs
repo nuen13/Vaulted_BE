@@ -9,6 +9,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Data.SqlClient.DataClassification;
 using Microsoft.EntityFrameworkCore;
 using Vaulted.Models;
+using Vaulted.Auth;
 namespace Vaulted.Controllers
 {
     [Route("api/[controller]")]
@@ -54,7 +55,8 @@ namespace Vaulted.Controllers
         // ------------ POST ------------ //
 
         // POST -> ADD REVIEW TO MEDIA
-        // EXEC AddReviewToMedia @MediaId, @Content, @Rating
+        // EXEC AddReviewToMedia @MediaId, @Content, @Rating, @UserId
+        // The author is the signed-in user (never taken from the request body).
         // Returns the created review and the media's recalculated averageRating.
         // The procedure runs its own transaction.
         [HttpPost("add-review")]
@@ -62,12 +64,13 @@ namespace Vaulted.Controllers
         {
             try
             {
-                string SQLQueryRaw = "EXEC AddReviewToMedia @MediaId, @Content, @Rating";
+                string SQLQueryRaw = "EXEC AddReviewToMedia @MediaId, @Content, @Rating, @UserId";
                 var parameters = new[]
                 {
                     new SqlParameter("@MediaId", createReviewDTO.MediaId),
                     new SqlParameter("@Content", createReviewDTO.Content ?? (object)DBNull.Value),
-                    new SqlParameter("@Rating", createReviewDTO.Rating)
+                    new SqlParameter("@Rating", createReviewDTO.Rating),
+                    new SqlParameter("@UserId", User.GetUserId())
                 };
 
                 var res = await _context.Database.SqlQueryRaw<ReviewWithRatingDTO>(SQLQueryRaw, parameters).ToListAsync();
@@ -75,6 +78,7 @@ namespace Vaulted.Controllers
             }
             catch (Exception ex)
             {
+                if (SqlErrors.ToResult(ex) is { } known) return known;
                 Console.WriteLine($"Error adding review: {ex.Message}");
                 return StatusCode(500, "An error occurred while adding the review.");
             }
@@ -85,7 +89,8 @@ namespace Vaulted.Controllers
 
         // ------------ PUT ------------ //
         // PUT -> UPDATE REVIEW BY ID
-        // EXEC UpdateReviewById @ReviewId, @Content, @Rating
+        // EXEC UpdateReviewById @ReviewId, @Content, @Rating, @UserId
+        // Only the review's author can change it (403 otherwise).
         // Returns the updated review and the media's recalculated averageRating.
 
         [HttpPut("update-review-by-id/{reviewId}")]
@@ -93,12 +98,13 @@ namespace Vaulted.Controllers
         {
             try
             {
-                string SQLQueryRaw = "EXEC UpdateReviewById @ReviewId, @Content, @Rating";
+                string SQLQueryRaw = "EXEC UpdateReviewById @ReviewId, @Content, @Rating, @UserId";
                 var parameters = new[]
                 {
                     new SqlParameter("@ReviewId", reviewId),
                     new SqlParameter("@Content", updateReviewDTO.Content ?? (object)DBNull.Value),
-                    new SqlParameter("@Rating", updateReviewDTO.Rating)
+                    new SqlParameter("@Rating", updateReviewDTO.Rating),
+                    new SqlParameter("@UserId", User.GetUserId())
                 };
                 var res = await _context.Database.SqlQueryRaw<ReviewWithRatingDTO>(SQLQueryRaw, parameters).ToListAsync();
                 var updated = res.FirstOrDefault();
@@ -107,7 +113,7 @@ namespace Vaulted.Controllers
             }
             catch (Exception ex)
             {
-                // Log the exception (you can use a logging framework here)
+                if (SqlErrors.ToResult(ex) is { } known) return known;
                 Console.WriteLine($"Error updating review: {ex.Message}");
                 return StatusCode(500, "An error occurred while updating the review.");
             }
@@ -117,17 +123,19 @@ namespace Vaulted.Controllers
 
         // ------------ DELETE ------------ //
         // DELETE -> DELETE REVIEW BY ID
-        // EXEC DeleteReviewById @ReviewId
+        // EXEC DeleteReviewById @ReviewId, @UserId
+        // Only the review's author can delete it (403 otherwise).
         // Returns { mediaId, averageRating } after recalculation.
         [HttpDelete("delete-review-by-id/{reviewId}")]
         public async Task<IActionResult> DeleteReviewById(Guid reviewId)
         {
             try
             {
-                string SQLQueryRaw = "EXEC DeleteReviewById @ReviewId";
+                string SQLQueryRaw = "EXEC DeleteReviewById @ReviewId, @UserId";
                 var parameters = new[]
                 {
-                    new SqlParameter("@ReviewId", reviewId)
+                    new SqlParameter("@ReviewId", reviewId),
+                    new SqlParameter("@UserId", User.GetUserId())
                 };
                 var res = await _context.Database.SqlQueryRaw<MediaRatingDTO>(SQLQueryRaw, parameters).ToListAsync();
                 var rating = res.FirstOrDefault();
@@ -136,6 +144,7 @@ namespace Vaulted.Controllers
             }
             catch (Exception ex)
             {
+                if (SqlErrors.ToResult(ex) is { } known) return known;
                 Console.WriteLine($"Error deleting review: {ex.Message}");
                 return StatusCode(500, "An error occurred while deleting the review.");
             }

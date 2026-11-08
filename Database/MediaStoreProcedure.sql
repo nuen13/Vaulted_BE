@@ -136,12 +136,13 @@ CREATE OR ALTER PROCEDURE InsertMediaItem
     @CategoryId INT,
     @CoverPhotoUrl NVARCHAR(500),
     @Status NVARCHAR(50),
-    @MediaLink NVARCHAR(500)
+    @MediaLink NVARCHAR(500),
+    @CreatedByUserId UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON;
-    INSERT INTO MediaItems (MediaTitle, CategoryId, CoverPhotoUrl, Status, MediaLink, DateCreated, DateUpdated)
-    VALUES (@MediaTitle, @CategoryId, @CoverPhotoUrl, @Status, @MediaLink, GETDATE(), GETDATE())
+    INSERT INTO MediaItems (MediaTitle, CategoryId, CoverPhotoUrl, Status, MediaLink, DateCreated, DateUpdated, CreatedByUserId)
+    VALUES (@MediaTitle, @CategoryId, @CoverPhotoUrl, @Status, @MediaLink, GETDATE(), GETDATE(), @CreatedByUserId)
 END
 GO
 
@@ -189,11 +190,24 @@ GO
 
 -- DELETE -> DELETE MEDIA BY ID
 -- Soft delete: reviews/photos/quotes reference the item without cascade, so a hard delete fails.
+-- Only the person who added the item can delete it (items with no creator: anyone).
+-- THROW 50404 = not found, 50403 = not yours.
 CREATE OR ALTER PROCEDURE DeleteMediaItemById
-    @MediaId UNIQUEIDENTIFIER
+    @MediaId UNIQUEIDENTIFIER,
+    @UserId UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON;
+
+    DECLARE @Found BIT = 0, @CreatorId UNIQUEIDENTIFIER;
+    SELECT @Found = 1, @CreatorId = CreatedByUserId
+    FROM MediaItems WHERE Id = @MediaId AND ISNULL(Deleted, 0) = 0;
+
+    IF @Found = 0
+        THROW 50404, 'Media not found.', 1;
+    IF @CreatorId IS NOT NULL AND @CreatorId <> @UserId
+        THROW 50403, 'Only the person who added this can delete it.', 1;
+
     UPDATE MediaItems
     SET Deleted = 1,
         DateUpdated = GETDATE()
@@ -205,13 +219,25 @@ GO
 -- PUT -> ARCHIVE / UNARCHIVE MEDIA BY ID
 -- Archiving hides an item from the normal lists without touching its reviews, photos or rating.
 -- DateUpdated is left alone so it returns to the same place in the list when unarchived.
--- Returns the item (empty if it doesn't exist).
+-- Only the person who added the item can archive/unarchive it (items with no creator: anyone).
+-- Returns the item. THROW 50404 = not found, 50403 = not yours.
 CREATE OR ALTER PROCEDURE SetMediaArchived
     @MediaId UNIQUEIDENTIFIER,
-    @Archived BIT
+    @Archived BIT,
+    @UserId UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON;
+
+    DECLARE @Found BIT = 0, @CreatorId UNIQUEIDENTIFIER;
+    SELECT @Found = 1, @CreatorId = CreatedByUserId
+    FROM MediaItems WHERE Id = @MediaId AND ISNULL(Deleted, 0) = 0;
+
+    IF @Found = 0
+        THROW 50404, 'Media not found.', 1;
+    IF @CreatorId IS NOT NULL AND @CreatorId <> @UserId
+        THROW 50403, 'Only the person who added this can archive it.', 1;
+
     UPDATE MediaItems
     SET Archived = @Archived,
         DateArchived = CASE WHEN @Archived = 1 THEN GETDATE() ELSE NULL END
@@ -228,16 +254,28 @@ GO
 -- @Ids is a JSON array of media ids. Each change is optional (NULL = leave as is):
 -- archive/unarchive, set status, set category, delete (soft).
 -- DateUpdated is left alone so items keep their place in the list.
--- Returns how many items were updated.
+-- Archiving/unarchiving or deleting only touches items the caller added (or items with no
+-- creator); others are skipped and counted in SkippedCount.
+-- Returns how many items were updated and how many were skipped.
 CREATE OR ALTER PROCEDURE BulkUpdateMediaItems
     @Ids NVARCHAR(MAX),
     @Archived BIT = NULL,
     @Status VARCHAR(50) = NULL,
     @CategoryId INT = NULL,
-    @Deleted BIT = NULL
+    @Deleted BIT = NULL,
+    @UserId UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON;
+
+    DECLARE @OwnerOnly BIT = CASE WHEN @Archived IS NOT NULL OR @Deleted IS NOT NULL THEN 1 ELSE 0 END;
+
+    DECLARE @Skipped INT = CASE WHEN @OwnerOnly = 0 THEN 0 ELSE (
+        SELECT COUNT(*) FROM MediaItems
+        WHERE Id IN (SELECT TRY_CAST(value AS UNIQUEIDENTIFIER) FROM OPENJSON(@Ids))
+          AND ISNULL(Deleted, 0) = 0
+          AND CreatedByUserId IS NOT NULL AND CreatedByUserId <> @UserId
+    ) END;
 
     UPDATE MediaItems
     SET Archived = ISNULL(@Archived, Archived),
@@ -249,8 +287,9 @@ BEGIN
         CategoryId = ISNULL(@CategoryId, CategoryId),
         Deleted = ISNULL(@Deleted, Deleted)
     WHERE Id IN (SELECT TRY_CAST(value AS UNIQUEIDENTIFIER) FROM OPENJSON(@Ids))
-      AND ISNULL(Deleted, 0) = 0;
+      AND ISNULL(Deleted, 0) = 0
+      AND (@OwnerOnly = 0 OR CreatedByUserId IS NULL OR CreatedByUserId = @UserId);
 
-    SELECT @@ROWCOUNT AS UpdatedCount;
+    SELECT @@ROWCOUNT AS UpdatedCount, @Skipped AS SkippedCount;
 END
 GO

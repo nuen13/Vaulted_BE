@@ -1,6 +1,6 @@
 
 -- Run this first, then CategoryStoreProcedure.sql, MediaStoreProcedure.sql, ReviewStoreProcedure.sql,
--- PhotoStoreProcedure.sql, QuoteStoreProcedure.sql and StatusStoreProcedure.sql (all in this folder).
+-- PhotoStoreProcedure.sql, QuoteStoreProcedure.sql, StatusStoreProcedure.sql and UserStoreProcedure.sql (all in this folder).
 -- Safe to re-run: tables are only created if missing.
 
 -- CATEGORIES
@@ -119,4 +119,31 @@ GO
 -- Photo display order (0 = first after the cover photo)
 IF COL_LENGTH('dbo.MediaPhoto', 'SortOrder') IS NULL
     ALTER TABLE MediaPhoto ADD SortOrder INT NOT NULL CONSTRAINT DF_MediaPhoto_SortOrder DEFAULT 0;
+GO
+
+-- USERS: friends who sign in with Google. Only emails in Auth:AllowedEmails (appsettings) can sign in;
+-- a row is created on their first sign-in.
+IF OBJECT_ID('dbo.Users', 'U') IS NULL
+CREATE TABLE Users (
+    Id UNIQUEIDENTIFIER NOT NULL CONSTRAINT DF_Users_Id DEFAULT NEWID() CONSTRAINT PK_Users PRIMARY KEY,
+    GoogleSub VARCHAR(255) NOT NULL CONSTRAINT UQ_Users_GoogleSub UNIQUE,
+    Email NVARCHAR(320) NOT NULL,
+    DisplayName NVARCHAR(100) NOT NULL,
+    PictureUrl VARCHAR(500) NULL,
+    DateCreated DATETIME NOT NULL CONSTRAINT DF_Users_DateCreated DEFAULT GETDATE(),
+    LastSignIn DATETIME NULL
+);
+GO
+
+-- Who added a media item. Only they can archive/unarchive or delete it.
+-- Items added before sign-in existed have NULL here and can be changed by anyone.
+IF COL_LENGTH('dbo.MediaItems', 'CreatedByUserId') IS NULL
+    ALTER TABLE MediaItems ADD CreatedByUserId UNIQUEIDENTIFIER NULL
+        CONSTRAINT FK_MediaItems_CreatedBy REFERENCES Users(Id);
+GO
+
+-- Who wrote a review. Old reviews have NULL (no author shown, anyone can edit).
+IF COL_LENGTH('dbo.Reviews', 'UserId') IS NULL
+    ALTER TABLE Reviews ADD UserId UNIQUEIDENTIFIER NULL
+        CONSTRAINT FK_Reviews_User REFERENCES Users(Id);
 GO

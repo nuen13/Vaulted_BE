@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using Microsoft.Extensions.FileProviders;
 using Vaulted.Models;
+using Vaulted.Auth;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -37,7 +38,8 @@ builder.Services.AddDbContext<ApplicationContext>(options =>
     options.UseSqlServer(connectionString)
 );
 
-builder.Services.AddDbContext<ApplicationContext>();
+// Google sign-in + allowlist; every endpoint requires a signed-in user (see Auth/AuthSetup.cs)
+builder.Services.AddVaultedAuth(builder.Configuration);
 
 
 var app = builder.Build();
@@ -50,10 +52,12 @@ if (app.Environment.IsDevelopment())
 }
 
 // app.UseHttpsRedirection();
-app.MapControllers();
-app.UseAuthorization();
+// Order matters: CORS before auth (so a 401 still carries CORS headers), auth before controllers.
 app.UseStaticFiles();
 app.UseCors("AllowAll");
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapControllers();
 
 
 
